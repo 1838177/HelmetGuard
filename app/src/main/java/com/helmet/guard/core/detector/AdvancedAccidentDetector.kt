@@ -103,7 +103,10 @@ class AdvancedAccidentDetector(
         val baseline = preWindow.toList()
         val baselineRoll = circularMean(baseline.map { it.roll }).takeIf { !it.isNaN() } ?: sample.roll
         val baselinePitch = circularMean(baseline.map { it.pitch }).takeIf { !it.isNaN() } ?: sample.pitch
-        val preMotion = motionScore(baseline)
+        // Exclude the immediate pre-impact fall from the riding background. Otherwise free fall
+        // itself makes a previously unattended helmet look as if it had been moving normally.
+        val background = baseline.filter { sample.receivedElapsedMs - it.receivedElapsedMs >= 300L }
+        val preMotion = motionScore(background.ifEmpty { baseline })
         context = CandidateContext(
             startedElapsedMs = sample.receivedElapsedMs,
             detectedAtMs = sample.receivedAtMs,
