@@ -101,7 +101,9 @@ bool notifyFrame(NimBLECharacteristic* characteristic, uint8_t type, const uint8
     const size_t frameLength = helmetguard::encodeFrame(type, nextSequence(), payload, length, frame, sizeof(frame));
     if (frameLength == 0) return false;
     characteristic->setValue(frame, frameLength);
-    return characteristic == eventCharacteristic ? characteristic->indicate() : characteristic->notify();
+    if (characteristic == eventCharacteristic) characteristic->indicate();
+    else characteristic->notify();
+    return true;
 }
 
 void sendButton(uint8_t code) {
