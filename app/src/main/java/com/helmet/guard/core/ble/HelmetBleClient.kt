@@ -170,6 +170,7 @@ class HelmetBleClient(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun sendCommand(command: Byte, eventId: Long = 0, argument: Int = 0): Boolean {
         val active = gatt ?: return false
         val service = active.getService(HelmetProtocol.SERVICE_UUID) ?: return false
