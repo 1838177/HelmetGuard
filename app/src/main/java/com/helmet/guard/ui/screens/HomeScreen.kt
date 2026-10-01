@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,7 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Battery5Bar
 import androidx.compose.material.icons.outlined.BluetoothConnected
 import androidx.compose.material.icons.outlined.ContactEmergency
-import androidx.compose.material.icons.outlined.GSensors
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Sensors
@@ -145,7 +144,7 @@ fun HomeScreen(
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(Icons.Outlined.GSensors, "合加速度", String.format("%.2f", sample?.accelerationG ?: 0f), "g", GuardBlue, Modifier.weight(1f))
+                MetricCard(Icons.Outlined.Speed, "合加速度", String.format("%.2f", sample?.accelerationG ?: 0f), "g", GuardBlue, Modifier.weight(1f))
                 MetricCard(Icons.Outlined.QueryStats, "角速度", String.format("%.0f", sample?.angularSpeedDps ?: 0f), "°/s", GuardCyan, Modifier.weight(1f))
             }
         }

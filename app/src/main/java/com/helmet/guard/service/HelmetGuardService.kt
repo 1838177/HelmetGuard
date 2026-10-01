@@ -93,11 +93,11 @@ class HelmetGuardService : Service() {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
-            ACTION_SAFE -> graph.incidents.cancel(intent.getLongExtra(EXTRA_EVENT_ID, -1))
-            ACTION_SEND_NOW -> graph.incidents.sendNow(intent.getLongExtra(EXTRA_EVENT_ID, -1))
-            ACTION_MANUAL_SOS -> graph.incidents.triggerManual(intent.getBooleanExtra(EXTRA_SIMULATION, false))
+            ACTION_SAFE -> graph.incidents.cancel(intent?.getLongExtra(EXTRA_EVENT_ID, -1))
+            ACTION_SEND_NOW -> graph.incidents.sendNow(intent?.getLongExtra(EXTRA_EVENT_ID, -1))
+            ACTION_MANUAL_SOS -> graph.incidents.triggerManual(intent?.getBooleanExtra(EXTRA_SIMULATION, false) ?: false)
             ACTION_LOCATION_MODE -> enterForeground(includeLocation = true)
-            ACTION_RUN_SIMULATION -> runSimulation(intent.getStringExtra(EXTRA_SCENARIO))
+            ACTION_RUN_SIMULATION -> runSimulation(intent?.getStringExtra(EXTRA_SCENARIO))
         }
         return START_STICKY
     }

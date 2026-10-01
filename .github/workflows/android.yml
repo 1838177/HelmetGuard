@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [main, arena/01a0f73c-helmetguard]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -34,7 +34,8 @@ jobs:
               tail -n 240 gradle-output.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
-            pr_number=$(gh pr list --head "$GITHUB_REF_NAME" --state open --json number --jq '.[0].number // empty')
+            branch_name=${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}
+            pr_number=$(gh pr list --head "$branch_name" --state open --json number --jq '.[0].number // empty')
             if [ -n "$pr_number" ]; then
               {
                 echo '### Android CI compile failure'
