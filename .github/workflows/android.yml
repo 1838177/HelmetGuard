@@ -41,7 +41,10 @@ jobs:
                 echo '<details><summary>Last 180 Gradle lines</summary>'
                 echo
                 echo '```text'
-                tail -n 180 gradle-output.log
+                grep -n -E '(^e: | error: |FAILURE:|What went wrong)' gradle-output.log | tail -n 200
+                echo
+                echo '--- tail ---'
+                tail -n 80 gradle-output.log
                 echo '```'
                 echo '</details>'
               } > /tmp/gradle-comment.md
