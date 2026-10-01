@@ -329,7 +329,7 @@ class HelmetBleClient(private val context: Context) {
                 HelmetProtocol.TYPE_TELEMETRY -> HelmetFrameCodec.telemetry(frame, SystemClock.elapsedRealtime(), System.currentTimeMillis())?.let {
                     _state.value = _state.value.copy(
                         phase = ConnectionPhase.READY,
-                        device = _state.value.device?.copy(batteryPercent = it.batteryPercent, lastSeenMs = it.receivedAtMs),
+                        device = _state.value.device?.copy(batteryPercent = if (it.batteryValid) it.batteryPercent else null, lastSeenMs = it.receivedAtMs),
                         lastPacketElapsedMs = it.receivedElapsedMs,
                         message = "安全监测运行中"
                     )

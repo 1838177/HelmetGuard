@@ -51,7 +51,7 @@ data class TelemetrySampleEntity(
     val ax: Float?, val ay: Float?, val az: Float?, val accelerationG: Float?,
     val gx: Float?, val gy: Float?, val gz: Float?, val angularSpeedDps: Float?,
     val roll: Float?, val pitch: Float?, val yaw: Float?,
-    val batteryPercent: Int?, val imuHealthy: Boolean?, val calibrated: Boolean?,
+    val batteryPercent: Int?, val batteryValid: Boolean?, val imuHealthy: Boolean?, val calibrated: Boolean?,
     val detectorStage: String?, val detectorConfidence: Float?,
     val impactPeakG: Float?, val orientationChangeDeg: Float?, val rejection: String?
 )

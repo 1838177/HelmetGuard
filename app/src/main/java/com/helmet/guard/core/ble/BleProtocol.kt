@@ -131,6 +131,9 @@ object HelmetFrameCodec {
             ax, ay, az, gx, gy, gz, roll, pitch, yaw, battery,
             imuHealthy = flags and 0x01 != 0,
             calibrated = flags and 0x02 != 0,
+            // Bit 2 is new in firmware 2.0. Legacy firmware remains compatible when it
+            // reports a plausible non-zero percentage.
+            batteryValid = flags and 0x04 != 0 || battery > 0,
             sequence = frame.sequence
         )
     }

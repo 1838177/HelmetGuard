@@ -48,7 +48,7 @@ class MockTelemetryEngine {
                     }
                 }
             }
-            emit(TelemetrySample(t, baseElapsed + t, baseWall + t, ax, ay, az, gx, gy, gz, roll, pitch, 0f, 88, true, true, index and 0xff))
+            emit(TelemetrySample(t, baseElapsed + t, baseWall + t, ax, ay, az, gx, gy, gz, roll, pitch, 0f, 88, true, true, sequence = index and 0xff))
             if (realtime) delay(interval)
         }
     }

@@ -76,7 +76,7 @@ fun DeviceScreen(graph: AppGraph, requestPermissions: () -> Unit, startMonitorin
                         Text(connection.device?.name ?: "尚未绑定头盔", style = MaterialTheme.typography.titleMedium)
                         Text(connection.device?.address ?: "扫描附近的 HelmetGuard 设备", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    telemetry?.let { StatusPill("${it.batteryPercent}%", GuardGreen) }
+                    telemetry?.takeIf { it.batteryValid }?.let { StatusPill("${it.batteryPercent}%", GuardGreen) }
                 }
                 Text(connection.message, style = MaterialTheme.typography.bodyMedium)
                 if (connection.isReady) {
@@ -132,7 +132,12 @@ fun DeviceScreen(graph: AppGraph, requestPermissions: () -> Unit, startMonitorin
                 SelfCheckRow("零偏校准", telemetry?.calibrated == true, if (telemetry?.calibrated == true) "校准有效" else "需要校准", Icons.Outlined.Tune)
                 SelfCheckRow("实时数据", connection.lastPacketElapsedMs > 0, "累计疑似丢帧 $loss", Icons.Outlined.NotificationsActive)
                 SelfCheckRow("定位能力", graph.location.hasForegroundPermission() && graph.location.isLocationEnabled(), "事故发生时使用系统原生定位", Icons.Outlined.MyLocation)
-                SelfCheckRow("头盔电量", (telemetry?.batteryPercent ?: 0) >= 20, telemetry?.let { "当前 ${it.batteryPercent}%" } ?: "等待数据", Icons.Outlined.Battery5Bar)
+                SelfCheckRow(
+                    "头盔电量",
+                    (telemetry?.takeIf { it.batteryValid }?.batteryPercent ?: 0) >= 20,
+                    telemetry?.takeIf { it.batteryValid }?.let { "当前 ${it.batteryPercent}%" } ?: "未配置安全电池分压/等待数据",
+                    Icons.Outlined.Battery5Bar
+                )
             }
         }
         item {

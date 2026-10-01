@@ -8,6 +8,7 @@
 
 - BLE 可靠状态机：扫描、MTU、服务发现、双特征订阅、READY、超时、分包组帧、CRC、丢帧统计和指数退避重连。
 - ESP32-S3 / 旧版 FFF0–FFF3 UUID 与二进制帧协议兼容。
+- 提供可编译的 ESP32-S3 参考固件：MPU6050 采样、姿态融合、蜂鸣器、按键、NVS 事件号、看门狗与硬件降级检测。
 - MPU6050 实时加速度、角速度、姿态、电量、健康和校准状态。
 - 多阶段事故检测：冲击、旋转、姿态、自由落体、碰撞前运动、碰撞后静止联合评分。
 - 专门抑制减速带和未佩戴头盔掉落两类常见误报。
@@ -38,7 +39,15 @@
 ```bash
 ./gradlew testDebugUnitTest
 ./gradlew assembleDebug
+
+# 可选：编译/烧录 ESP32-S3 固件
+cd firmware
+pio test -e native
+pio run
+pio run -t upload
 ```
+
+硬件接线、电池安全分压和首次校准说明见 [`firmware/README.md`](firmware/README.md)。
 
 首次安装后：
 
@@ -59,6 +68,7 @@ app/src/main/java/com/helmet/guard/
 ├── domain/        # 不依赖 UI 的领域模型
 ├── service/       # 前台守护、事故协调、通知与恢复
 └── ui/            # 全新 Compose 产品界面
+firmware/        # PlatformIO ESP32-S3 参考固件与原生协议测试
 docs/
 ├── BLE_PROTOCOL.md
 ├── ACCIDENT_DETECTION.md

@@ -112,7 +112,8 @@ class TelemetryRecorder(
             roll = sample.roll.takeIf { c.attitude },
             pitch = sample.pitch.takeIf { c.attitude },
             yaw = sample.yaw.takeIf { c.attitude },
-            batteryPercent = sample.batteryPercent.takeIf { c.deviceState },
+            batteryPercent = sample.batteryPercent.takeIf { c.deviceState && sample.batteryValid },
+            batteryValid = sample.batteryValid.takeIf { c.deviceState },
             imuHealthy = sample.imuHealthy.takeIf { c.deviceState },
             calibrated = sample.calibrated.takeIf { c.deviceState },
             detectorStage = detector.stage.name.takeIf { c.detectorFeatures },
@@ -142,13 +143,13 @@ class TelemetryRecorder(
         val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(exportDir, "helmetguard-${session.id}-${session.label}.csv")
         file.bufferedWriter().use { writer ->
-            writer.appendLine("receivedAtMs,deviceTimestampMs,sequence,ax,ay,az,totalAccG,gx,gy,gz,totalGyroDps,roll,pitch,yaw,battery,imuHealthy,calibrated,detectorStage,confidence,impactPeakG,orientationChangeDeg,rejection")
+            writer.appendLine("receivedAtMs,deviceTimestampMs,sequence,ax,ay,az,totalAccG,gx,gy,gz,totalGyroDps,roll,pitch,yaw,battery,batteryValid,imuHealthy,calibrated,detectorStage,confidence,impactPeakG,orientationChangeDeg,rejection")
             rows.forEach { r ->
                 writer.appendLine(listOf(
                     r.receivedAtMs, r.deviceTimestampMs, r.sequence,
                     r.ax, r.ay, r.az, r.accelerationG,
                     r.gx, r.gy, r.gz, r.angularSpeedDps,
-                    r.roll, r.pitch, r.yaw, r.batteryPercent,
+                    r.roll, r.pitch, r.yaw, r.batteryPercent, r.batteryValid,
                     r.imuHealthy, r.calibrated, r.detectorStage, r.detectorConfidence,
                     r.impactPeakG, r.orientationChangeDeg, r.rejection
                 ).joinToString(",") { csv(it) })

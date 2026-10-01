@@ -18,6 +18,7 @@ data class TelemetrySample(
     val batteryPercent: Int,
     val imuHealthy: Boolean,
     val calibrated: Boolean,
+    val batteryValid: Boolean = true,
     val sequence: Int = 0
 ) {
     val accelerationG: Float get() = sqrt(ax * ax + ay * ay + az * az)

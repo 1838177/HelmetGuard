@@ -32,7 +32,7 @@ CRC 为从帧头到 Payload 最后一字节的 CRC-8-CCITT，初值 `0x00`，多
 | 10/12/14 | int16×3 | GX/GY/GZ | 1/10 °/s |
 | 16/18/20 | int16×3 | Roll/Pitch/Yaw | 1/10 ° |
 | 22 | uint8 | 电量 | 0–100% |
-| 23 | uint8 | 状态位 | bit0 IMU 正常；bit1 已校准 |
+| 23 | uint8 | 状态位 | bit0 IMU 正常；bit1 已校准；bit2 电量读数有效 |
 
 推荐 20–50 Hz。频率低于 20 Hz 会降低冲击持续时间和自由落体特征的精度。
 

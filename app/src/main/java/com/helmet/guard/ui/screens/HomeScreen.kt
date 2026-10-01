@@ -150,7 +150,7 @@ fun HomeScreen(
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(Icons.Outlined.Battery5Bar, "头盔电量", "${sample?.batteryPercent ?: 0}", "%", GuardGreen, Modifier.weight(1f))
+                MetricCard(Icons.Outlined.Battery5Bar, "头盔电量", sample?.takeIf { it.batteryValid }?.batteryPercent?.toString() ?: "--", if (sample?.batteryValid == true) "%" else "未接分压", GuardGreen, Modifier.weight(1f))
                 MetricCard(Icons.Outlined.Sensors, "事故置信度", "${(detector.confidence * 100).toInt()}", "%", GuardOrange, Modifier.weight(1f))
             }
         }
