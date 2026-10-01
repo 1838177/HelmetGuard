@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
@@ -179,7 +180,7 @@ class HelmetBleClient(private val context: Context) {
         enqueueOperation {
             if (active !== gatt) return@enqueueOperation false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                active.writeCharacteristic(characteristic, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == 0
+                active.writeCharacteristic(characteristic, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS
             } else {
                 @Suppress("DEPRECATION")
                 characteristic.value = bytes
@@ -308,7 +309,7 @@ class HelmetBleClient(private val context: Context) {
             val value = if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0) {
                 BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
             } else BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) active.writeDescriptor(descriptor, value) == 0
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) active.writeDescriptor(descriptor, value) == BluetoothStatusCodes.SUCCESS
             else {
                 @Suppress("DEPRECATION") descriptor.value = value
                 @Suppress("DEPRECATION") active.writeDescriptor(descriptor)
