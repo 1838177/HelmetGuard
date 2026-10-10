@@ -65,6 +65,7 @@ class HelmetBleClient(private val context: Context) {
     private var reconnectAttempt = 0
     private var reconnectJob: Job? = null
     private var scanStopJob: Job? = null
+    @Volatile private var scannerRunning = false
     private var lastSequence: Int? = null
     private val commandSequence = AtomicInteger(0)
     private var expectedSubscriptions = 0
@@ -106,19 +107,38 @@ class HelmetBleClient(private val context: Context) {
             _state.value = _state.value.copy(phase = ConnectionPhase.BLUETOOTH_OFF, message = "请开启蓝牙")
             return
         }
-        val scanner = bluetoothAdapter.bluetoothLeScanner ?: return
+        val scanner = bluetoothAdapter.bluetoothLeScanner ?: run {
+            _state.value = _state.value.copy(phase = ConnectionPhase.ERROR, message = "系统蓝牙扫描器不可用，请关闭再开启蓝牙")
+            return
+        }
+        // A second startScan with the same callback returns ALREADY_STARTED on several ROMs.
+        if (scannerRunning) runCatching { scanner.stopScan(scanCallback) }
+        scannerRunning = false
         _devices.value = emptyList()
-        _state.value = _state.value.copy(phase = ConnectionPhase.SCANNING, message = "正在搜索 HelmetGuard 头盔")
-        scanner.startScan(null, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), scanCallback)
+        _state.value = _state.value.copy(phase = ConnectionPhase.SCANNING, message = "正在搜索附近 BLE 设备（12 秒）")
+        runCatching {
+            scanner.startScan(null, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), scanCallback)
+            scannerRunning = true
+        }.onFailure {
+            _state.value = _state.value.copy(phase = ConnectionPhase.ERROR, message = "无法开始扫描：${it.message ?: "系统拒绝"}")
+            return
+        }
         scanStopJob?.cancel()
         scanStopJob = scope.launch { delay(12_000); stopScan() }
     }
 
     @SuppressLint("MissingPermission")
     fun stopScan() {
-        runCatching { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
+        if (scannerRunning) runCatching { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
+        scannerRunning = false
+        scanStopJob?.cancel()
+        scanStopJob = null
         if (_state.value.phase == ConnectionPhase.SCANNING) {
-            _state.value = _state.value.copy(phase = if (targetAddress == null) ConnectionPhase.UNBOUND else ConnectionPhase.DISCONNECTED, message = "扫描结束")
+            val count = _devices.value.size
+            _state.value = _state.value.copy(
+                phase = if (targetAddress == null) ConnectionPhase.UNBOUND else ConnectionPhase.DISCONNECTED,
+                message = if (count == 0) "未发现设备：请靠近头盔并确认固件正在广播" else "扫描结束，共发现 $count 台 BLE 设备"
+            )
         }
     }
 
@@ -201,15 +221,37 @@ class HelmetBleClient(private val context: Context) {
         @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val record = result.scanRecord
-            val name = result.device.name ?: record?.deviceName ?: return
+            val advertisedName = runCatching { result.device.name }.getOrNull() ?: record?.deviceName
             val advertisesService = record?.serviceUuids?.contains(ParcelUuid(HelmetProtocol.SERVICE_UUID)) == true
-            if (!name.startsWith(HelmetProtocol.DEVICE_PREFIX, ignoreCase = true) && !advertisesService) return
-            val item = HelmetDevice(name, result.device.address, result.rssi, lastSeenMs = System.currentTimeMillis())
-            _devices.value = (_devices.value.filterNot { it.address == item.address } + item).sortedByDescending { it.rssi ?: -127 }
+            val matchesName = advertisedName?.startsWith(HelmetProtocol.DEVICE_PREFIX, ignoreCase = true) == true
+            val compatible = advertisesService || matchesName
+            val name = advertisedName?.takeIf { it.isNotBlank() }
+                ?: if (compatible) "HelmetGuard（未命名）" else "未命名 BLE 设备"
+            val item = HelmetDevice(
+                name = name,
+                address = result.device.address,
+                rssi = result.rssi,
+                lastSeenMs = System.currentTimeMillis(),
+                isCompatible = compatible,
+                isConnectable = result.isConnectable
+            )
+            // Show compatible helmets first, but retain other nearby BLE devices so users can
+            // diagnose firmware names/advertisements instead of seeing an unexplained empty list.
+            _devices.value = (_devices.value.filterNot { it.address == item.address } + item)
+                .sortedWith(compareByDescending<HelmetDevice> { it.isCompatible }.thenByDescending { it.rssi ?: -127 })
+                .take(60)
         }
 
         override fun onScanFailed(errorCode: Int) {
-            _state.value = _state.value.copy(phase = ConnectionPhase.ERROR, message = "蓝牙扫描失败：$errorCode")
+            scannerRunning = false
+            val reason = when (errorCode) {
+                ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "扫描已经在运行"
+                ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "系统无法注册扫描器，请重启蓝牙"
+                ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "蓝牙系统内部错误，请关闭再开启蓝牙"
+                ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "该手机不支持当前 BLE 扫描模式"
+                else -> "错误码 $errorCode"
+            }
+            _state.value = _state.value.copy(phase = ConnectionPhase.ERROR, message = "蓝牙扫描失败：$reason")
         }
     }
 
@@ -252,7 +294,7 @@ class HelmetBleClient(private val context: Context) {
             val telemetry = service?.getCharacteristic(HelmetProtocol.TELEMETRY_UUID)
             val events = service?.getCharacteristic(HelmetProtocol.EVENT_UUID)
             if (service == null || telemetry == null || events == null || service.getCharacteristic(HelmetProtocol.COMMAND_UUID) == null) {
-                failAndReconnect("设备协议不匹配，缺少必要服务")
+                failWithoutReconnect("该 BLE 设备不是兼容的 HelmetGuard（缺少 FFF0–FFF3 服务）")
                 return
             }
             expectedSubscriptions = 2
@@ -395,6 +437,20 @@ class HelmetBleClient(private val context: Context) {
         _state.value = _state.value.copy(phase = ConnectionPhase.ERROR, message = message)
         val active = gatt
         if (active != null) handleDisconnect(active, message) else scheduleReconnect()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun failWithoutReconnect(message: String) {
+        explicitDisconnect = true
+        reconnectJob?.cancel()
+        clearOperations()
+        val active = gatt
+        gatt = null
+        runCatching { active?.disconnect() }
+        runCatching { active?.close() }
+        targetAddress = null
+        decoder.reset()
+        _state.value = _state.value.copy(phase = ConnectionPhase.ERROR, message = message)
     }
 
     private fun scheduleReconnect() {

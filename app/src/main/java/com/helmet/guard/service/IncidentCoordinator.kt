@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
 import androidx.core.content.ContextCompat
+import com.helmet.guard.appGraph
 import com.helmet.guard.core.location.LocationOutcome
 import com.helmet.guard.core.location.NativeLocationProvider
 import com.helmet.guard.core.sms.SmsPipeline
@@ -19,6 +20,7 @@ import com.helmet.guard.domain.IncidentCandidate
 import com.helmet.guard.domain.IncidentSource
 import com.helmet.guard.domain.LocationFix
 import com.helmet.guard.domain.SmsPartState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -68,7 +70,7 @@ class IncidentCoordinator(
                 )
                 notifyState()
                 acquireWakeLock()
-                activeJob = scope.launch { runCountdown(candidate, deadline) }
+                activeJob = launchProcessing(candidate.eventId) { runCountdown(candidate, deadline) }
             }
         }
     }
@@ -112,20 +114,42 @@ class IncidentCoordinator(
                 if (_state.value.stage in ACTIVE_STAGES) return@withLock
                 val candidate = pending.toCandidate()
                 val restoredRemaining = (pending.countdownDeadlineMs - System.currentTimeMillis()).coerceIn(0L, 30_000L)
+                val restoredStage = runCatching { EmergencyStage.valueOf(pending.stage) }.getOrDefault(EmergencyStage.FAILED)
                 _state.value = EmergencyUiState(
-                    EmergencyStage.valueOf(pending.stage), pending.eventId,
+                    restoredStage, pending.eventId,
                     (restoredRemaining / 1_000L).toInt(),
                     pending.confidence, "恢复上次未完成的事故处理", pending.stage == EmergencyStage.COUNTDOWN.name,
                     pending.isSimulation
                 )
                 notifyState()
                 acquireWakeLock()
-                activeJob = scope.launch {
+                activeJob = launchProcessing(candidate.eventId) {
                     if (pending.stage == EmergencyStage.COUNTDOWN.name) {
                         runCountdown(candidate, System.currentTimeMillis() + restoredRemaining)
                     } else dispatch(candidate)
                 }
             }
+        }
+    }
+
+    private fun launchProcessing(eventId: Long, block: suspend () -> Unit): Job = scope.launch {
+        try {
+            block()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Throwable) {
+            val detail = "事故处理发生异常：${error.message ?: error.javaClass.simpleName}。请立即手动联系紧急联系人。"
+            runCatching { database.accidents().updateStage(eventId, EmergencyStage.FAILED.name, detail) }
+            _state.value = _state.value.copy(
+                stage = EmergencyStage.FAILED,
+                eventId = eventId,
+                secondsLeft = 0,
+                detail = detail,
+                canCancel = false
+            )
+            notifyState()
+            context.appGraph.runtime.postMessage(detail)
+            releaseWakeLock()
         }
     }
 
@@ -227,7 +251,11 @@ class IncidentCoordinator(
     }
 
     private fun notifyState() {
-        notifications?.notify(GuardNotifications.EMERGENCY_ID, GuardNotifications.emergency(context, _state.value))
+        runCatching {
+            notifications?.notify(GuardNotifications.EMERGENCY_ID, GuardNotifications.emergency(context, _state.value))
+        }.onFailure {
+            context.appGraph.runtime.postMessage("无法显示事故通知，请检查通知权限")
+        }
     }
 
     private fun promoteServiceForLocation() {

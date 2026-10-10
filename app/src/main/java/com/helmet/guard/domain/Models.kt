@@ -42,7 +42,9 @@ data class HelmetDevice(
     val address: String,
     val rssi: Int? = null,
     val batteryPercent: Int? = null,
-    val lastSeenMs: Long = 0L
+    val lastSeenMs: Long = 0L,
+    val isCompatible: Boolean = false,
+    val isConnectable: Boolean = true
 )
 
 data class ConnectionState(

@@ -51,5 +51,21 @@ class BleProtocolTest {
         assertEquals(87, value.batteryPercent)
         assertTrue(value.imuHealthy)
         assertTrue(value.calibrated)
+        assertTrue(value.batteryValid) // Legacy non-zero battery remains compatible without bit 2.
+    }
+
+    @Test fun `zero battery is unknown unless firmware marks it valid`() {
+        fun decode(flags: Byte) = ByteBuffer.allocate(24).order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(1)
+            .putShort(0).putShort(0).putShort(1000)
+            .putShort(0).putShort(0).putShort(0)
+            .putShort(0).putShort(0).putShort(0)
+            .put(0).put(flags).array()
+            .let { HelmetFrameCodec.encode(HelmetProtocol.TYPE_TELEMETRY, 1, it) }
+            .let { FrameStreamDecoder().parse(it)!! }
+            .let { HelmetFrameCodec.telemetry(it, 1, 1)!! }
+
+        assertEquals(false, decode(0x03).batteryValid)
+        assertEquals(true, decode(0x07).batteryValid)
     }
 }

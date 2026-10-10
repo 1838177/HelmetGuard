@@ -2,7 +2,6 @@ package com.helmet.guard.core.ble
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.bluetooth.le.ScanFilter
 import android.companion.AssociationInfo
 import android.companion.AssociationRequest
 import android.companion.BluetoothLeDeviceFilter
@@ -10,7 +9,6 @@ import android.companion.CompanionDeviceManager
 import android.content.Context
 import android.content.IntentSender
 import android.os.Build
-import android.os.ParcelUuid
 import java.util.regex.Pattern
 
 /** Uses Android's system-owned chooser; the app never receives unrelated scan results. */
@@ -19,9 +17,10 @@ class CompanionPairing(private val context: Context) {
     fun request(launchChooser: (IntentSender) -> Unit, onFailure: (String) -> Unit) {
         val manager = context.getSystemService(CompanionDeviceManager::class.java)
             ?: return onFailure("系统不支持配套设备关联")
+        // Filter by the stable name prefix only. Requiring both name and service UUID hides older
+        // ESP32 advertisements that place FFF0 exclusively in the scan response packet.
         val filter = BluetoothLeDeviceFilter.Builder()
             .setNamePattern(Pattern.compile("${HelmetProtocol.DEVICE_PREFIX}.*", Pattern.CASE_INSENSITIVE))
-            .setScanFilter(ScanFilter.Builder().setServiceUuid(ParcelUuid(HelmetProtocol.SERVICE_UUID)).build())
             .build()
         val request = AssociationRequest.Builder().addDeviceFilter(filter).setSingleDevice(false).build()
         manager.associate(request, object : CompanionDeviceManager.Callback() {

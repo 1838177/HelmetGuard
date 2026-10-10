@@ -65,7 +65,7 @@ import com.helmet.guard.ui.theme.GuardRed
 @Composable
 fun HomeScreen(
     graph: AppGraph,
-    requestPermissions: () -> Unit,
+    requestPermissions: (afterResult: () -> Unit) -> Unit,
     startMonitoring: () -> Unit,
     stopMonitoring: () -> Unit,
     openTelemetry: () -> Unit,
@@ -135,7 +135,10 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.height(18.dp))
                     Button(
-                        onClick = { if (monitoring) stopMonitoring() else { requestPermissions(); startMonitoring() } },
+                        onClick = {
+                            if (monitoring) stopMonitoring()
+                            else requestPermissions { startMonitoring() }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF17499F))
                     ) { Text(if (monitoring) "结束本次守护" else "开启骑行守护") }
@@ -208,8 +211,10 @@ fun HomeScreen(
             confirmButton = {
                 Button(onClick = {
                     confirmSos = false
-                    startMonitoring()
-                    runServiceAction(HelmetGuardService.ACTION_MANUAL_SOS) { putExtra(HelmetGuardService.EXTRA_SIMULATION, false) }
+                    requestPermissions {
+                        startMonitoring()
+                        runServiceAction(HelmetGuardService.ACTION_MANUAL_SOS) { putExtra(HelmetGuardService.EXTRA_SIMULATION, false) }
+                    }
                 }) { Text("开始倒计时") }
             },
             dismissButton = { TextButton(onClick = { confirmSos = false }) { Text("返回") } }

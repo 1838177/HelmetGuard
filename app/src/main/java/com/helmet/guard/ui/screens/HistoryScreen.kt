@@ -2,12 +2,15 @@ package com.helmet.guard.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -122,8 +125,13 @@ fun HistoryScreen(graph: AppGraph) {
                     }
                     Text(accident.detail)
                     Text("可信度 ${(accident.confidence * 100).toInt()}% · 峰值 %.2fg · 姿态 %.0f°".format(accident.peakAccelerationG, accident.orientationChangeDeg), style = MaterialTheme.typography.bodyMedium)
-                    if (accident.latitude != null) {
-                        Row { Icon(Icons.Outlined.LocationOn, null, tint = GuardBlue); Text(" %.6f, %.6f · ±%.0fm".format(accident.latitude, accident.longitude, accident.locationAccuracyMeters ?: 0f)) }
+                    val latitude = accident.latitude
+                    val longitude = accident.longitude
+                    if (latitude != null && longitude != null) {
+                        Row {
+                            Icon(Icons.Outlined.LocationOn, null, tint = GuardBlue)
+                            Text(" %.6f, %.6f · ±%.0fm".format(latitude, longitude, accident.locationAccuracyMeters ?: 0f))
+                        }
                     }
                 }
             }
@@ -172,7 +180,10 @@ private fun AccidentDetailDialog(graph: AppGraph, accident: AccidentEntity, dism
         onDismissRequest = dismiss,
         title = { Text(if (accident.isSimulation) "模拟演练详情" else "事故与短信回执") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 FeatureLine("处理状态", accident.stage)
                 FeatureLine("检测来源", accident.source)
                 FeatureLine("可信度", "${(accident.confidence * 100).toInt()}%")

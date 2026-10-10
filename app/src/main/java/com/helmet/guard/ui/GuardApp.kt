@@ -12,9 +12,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -41,7 +45,7 @@ private val destinations = listOf(
 @Composable
 fun GuardApp(
     graph: AppGraph,
-    requestCorePermissions: () -> Unit,
+    requestCorePermissions: (afterResult: () -> Unit) -> Unit,
     startMonitoring: () -> Unit,
     stopMonitoring: () -> Unit,
     associateCompanion: () -> Unit,
@@ -50,7 +54,12 @@ fun GuardApp(
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(graph) {
+        graph.runtime.messages.collect { snackbarHostState.showSnackbar(it) }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (route in destinations.map { it.route }) {
                 NavigationBar {

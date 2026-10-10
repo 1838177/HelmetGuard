@@ -12,6 +12,7 @@ import com.helmet.guard.appGraph
 import com.helmet.guard.core.ble.HelmetButton
 import com.helmet.guard.core.detector.MockScenario
 import com.helmet.guard.core.detector.MockTelemetryEngine
+import com.helmet.guard.domain.ConnectionPhase
 import com.helmet.guard.domain.DetectionFeatures
 import com.helmet.guard.domain.IncidentCandidate
 import com.helmet.guard.domain.IncidentSource
@@ -23,6 +24,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -69,7 +72,17 @@ class HelmetGuardService : Service() {
             combine(graph.ble.state, graph.recorder.state) { connection, recording -> connection to recording.isRecording }
                 .collect { (connection, recording) ->
                     val manager = getSystemService(android.app.NotificationManager::class.java)
-                    manager?.notify(GuardNotifications.MONITORING_ID, GuardNotifications.monitoring(this@HelmetGuardService, connection, recording))
+                    runCatching {
+                        manager?.notify(GuardNotifications.MONITORING_ID, GuardNotifications.monitoring(this@HelmetGuardService, connection, recording))
+                    }
+                }
+        }
+        scope.launch {
+            graph.ble.state
+                .map { state -> state.device?.takeIf { state.phase == ConnectionPhase.READY }?.let { it.address to it.name } }
+                .distinctUntilChanged()
+                .collect { readyDevice ->
+                    readyDevice?.let { (address, name) -> graph.preferences.bindDevice(address, name) }
                 }
         }
         scope.launch {

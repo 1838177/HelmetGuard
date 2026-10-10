@@ -53,7 +53,7 @@ import com.helmet.guard.ui.theme.GuardRed
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(graph: AppGraph, requestPermissions: () -> Unit, openContacts: () -> Unit) {
+fun SettingsScreen(graph: AppGraph, requestPermissions: (afterResult: () -> Unit) -> Unit, openContacts: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val contacts by graph.database.contacts().observeAll().collectAsState(initial = emptyList())
@@ -90,7 +90,7 @@ fun SettingsScreen(graph: AppGraph, requestPermissions: () -> Unit, openContacts
                         Column { Text(check.title, fontWeight = FontWeight.SemiBold); Text(check.detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 }
-                Button(onClick = requestPermissions, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Security, null); Text(" 授予必要权限") }
+                Button(onClick = { requestPermissions {} }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Security, null); Text(" 授予必要权限") }
                 OutlinedButton(onClick = { context.startActivity(graph.reliability.notificationSettingsIntent()) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Notifications, null); Text(" 检查通知设置") }
                 OutlinedButton(onClick = {
                     runCatching { context.startActivity(graph.reliability.batteryOptimizationIntent()) }

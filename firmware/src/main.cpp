@@ -393,6 +393,7 @@ void initializeBle() {
     commandCharacteristic->setCallbacks(&commandCallbacks);
     service->start();
     NimBLEAdvertising* advertising = NimBLEDevice::getAdvertising();
+    advertising->setName(name);
     advertising->addServiceUUID(kServiceUuid);
     advertising->setScanResponse(true);
     advertising->start();

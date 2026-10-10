@@ -13,8 +13,11 @@ import com.helmet.guard.data.recording.TelemetryRecorder
 import com.helmet.guard.domain.DetectorSnapshot
 import com.helmet.guard.domain.TelemetrySample
 import com.helmet.guard.service.IncidentCoordinator
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class RuntimeStore {
@@ -22,6 +25,10 @@ class RuntimeStore {
     val telemetry: StateFlow<TelemetrySample?> = _telemetry.asStateFlow()
     private val _detector = MutableStateFlow(DetectorSnapshot())
     val detector: StateFlow<DetectorSnapshot> = _detector.asStateFlow()
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val messages: SharedFlow<String> = _messages.asSharedFlow()
+
+    fun postMessage(message: String) { _messages.tryEmit(message) }
 
     fun update(sample: TelemetrySample, detector: DetectorSnapshot) {
         _telemetry.value = sample
