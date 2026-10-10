@@ -1,7 +1,10 @@
 package com.helmet.guard.ui.screens
 
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.helmet.guard.AppGraph
 import com.helmet.guard.domain.ConnectionPhase
 import com.helmet.guard.ui.components.InfoCard
@@ -107,8 +111,14 @@ fun DeviceScreen(graph: AppGraph, requestPermissions: (afterResult: () -> Unit) 
                     if (connection.phase == ConnectionPhase.BLUETOOTH_OFF) {
                         OutlinedButton(
                             onClick = {
-                                runCatching { context.startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
-                                    .onFailure { graph.runtime.postMessage("无法打开蓝牙设置") }
+                                val canConnect = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                                if (!canConnect) {
+                                    requestPermissions {}
+                                } else {
+                                    runCatching { context.startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
+                                        .onFailure { graph.runtime.postMessage("无法打开蓝牙设置") }
+                                }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("开启手机蓝牙") }
