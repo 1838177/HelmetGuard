@@ -394,7 +394,10 @@ void initializeBle() {
     service->start();
     NimBLEAdvertising* advertising = NimBLEDevice::getAdvertising();
     advertising->setName(name);
-    advertising->addServiceUUID(kServiceUuid);
+    // Advertise the Bluetooth-base UUID in its 16-bit form. This leaves enough of the
+    // 31-byte primary advertising packet for flags and avoids pushing the discoverability
+    // data/name out on ROMs that do not reliably merge the scan response.
+    advertising->addServiceUUID(NimBLEUUID(static_cast<uint16_t>(0xFFF0)));
     advertising->setScanResponse(true);
     advertising->start();
     Serial.printf("BLE advertising as %s\n", name);

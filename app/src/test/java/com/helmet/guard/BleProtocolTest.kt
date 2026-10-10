@@ -4,6 +4,7 @@ import com.helmet.guard.core.ble.Crc8
 import com.helmet.guard.core.ble.FrameStreamDecoder
 import com.helmet.guard.core.ble.HelmetFrameCodec
 import com.helmet.guard.core.ble.HelmetProtocol
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -68,4 +69,36 @@ class BleProtocolTest {
         assertEquals(false, decode(0x03).batteryValid)
         assertEquals(true, decode(0x07).batteryValid)
     }
+
+    @Test fun `published telemetry vector is byte exact`() {
+        val payload = hex("04 03 02 01 64 00 38 FF D4 03 7D 00 1F FF 32 00 78 00 DD FF 84 03 57 07")
+        val actual = HelmetFrameCodec.encode(HelmetProtocol.TYPE_TELEMETRY, 0x2A, payload)
+        assertArrayEquals(
+            hex("AA 55 01 01 2A 18 04 03 02 01 64 00 38 FF D4 03 7D 00 1F FF 32 00 78 00 DD FF 84 03 57 07 3F"),
+            actual
+        )
+    }
+
+    @Test fun `published incident vector decodes exact fields`() {
+        val frame = FrameStreamDecoder().parse(
+            hex("AA 55 01 02 2B 10 44 33 22 11 88 77 66 55 82 02 DB 02 19 00 0F 03 7B")
+        )!!
+        val incident = HelmetFrameCodec.incident(frame)!!
+        assertEquals(0x55667788L, incident.eventId)
+        assertEquals(6.42f, incident.peakAccelerationG, 0.001f)
+        assertEquals(731f, incident.peakAngularSpeedDps, 0.001f)
+        assertEquals(2.5f, incident.stillnessSeconds, 0.001f)
+        assertEquals(15, incident.requestedCountdownSeconds)
+        assertTrue(incident.needsAck)
+    }
+
+    @Test fun `button wire codes do not depend on enum ordinal`() {
+        val expected = listOf(1 to com.helmet.guard.core.ble.HelmetButton.SINGLE, 2 to com.helmet.guard.core.ble.HelmetButton.DOUBLE, 3 to com.helmet.guard.core.ble.HelmetButton.LONG)
+        expected.forEach { (code, button) ->
+            val frame = FrameStreamDecoder().parse(HelmetFrameCodec.encode(HelmetProtocol.TYPE_BUTTON, code, byteArrayOf(code.toByte())))!!
+            assertEquals(button, HelmetFrameCodec.button(frame))
+        }
+    }
+
+    private fun hex(value: String): ByteArray = value.trim().split(Regex("\\s+")).map { it.toInt(16).toByte() }.toByteArray()
 }

@@ -44,7 +44,7 @@ pio run --target upload
 pio device monitor
 ```
 
-首次启动时将进行约 1.2 秒陀螺仪零偏校准，请保持头盔静止。设备广播名类似 `HelmetGuard-S3-A1B2`。
+首次启动时将进行约 1.2 秒陀螺仪零偏校准，请保持头盔静止。设备广播名类似 `HelmetGuard-S3-A1B2`。广告中的 FFF0 使用 16 位 UUID 编码，Android 会自动展开为 Bluetooth Base UUID；名称放在 scan response，避免 31 字节广告容量不足。
 
 ## 行为
 
